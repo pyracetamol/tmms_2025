@@ -1,0 +1,48 @@
+# Set up units and boundaries
+units       metal
+boundary    p p p
+atom_style  atomic
+
+# Read input data
+read_data   PdH_equilibrated_450.data
+
+# Define masses for atomic types
+mass 1      1.00794  # H
+mass 2      106.42  # Pd 
+
+pair_style eam/alloy
+pair_coeff * * PdH_Zhou_June29_2007_2.eam.alloy H Pd
+
+##################################
+# Parameters #
+variable    randomSeed equal        40         
+variable    timeStepLength equal    0.001    # In ps
+variable    tDamp equal             0.1      # Thermostat damping (ps)
+variable    pDamp equal             1        # Barostat damping (ps)
+variable    startingTemp equal      500      # Initial temperature in K
+variable    externalPressure equal  0.0      # External pressure in atm
+variable    run1 equal              50000   # Steps 
+##################################
+
+group Hatoms    type 1 
+compute         Hmsd Hatoms msd com yes
+
+# Set timestep
+timestep    ${timeStepLength}
+
+# Starting simulation
+
+thermo_style custom step temp press ke pe etotal vol enthalpy c_Hmsd[*]
+thermo_modify flush yes
+thermo 100
+
+#dump        dump1 all custom 5000 equil.traj.*.dump id type xu yu zu vx vy vz fx fy fz 
+
+
+# Step 1: 
+fix         1 all npt temp ${startingTemp} ${startingTemp} ${tDamp} iso ${externalPressure} ${externalPressure} ${pDamp}
+run         ${run1}
+unfix       1
+
+# Save final configuration including velocities
+write_data PdH_equilibrated_500.data
