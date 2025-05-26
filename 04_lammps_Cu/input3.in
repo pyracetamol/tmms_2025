@@ -1,0 +1,84 @@
+# Use the following units:
+#   mass         g/mol
+#   length       angstrom
+#   time         ps
+#   energy       eV
+#   force        eV/angstrom
+#   temperature  K
+#   pressure     bar
+units metal
+
+# Use periodic boundaries in all three dimensions, i.e., no surfaces.
+boundary p p p
+
+# We use atoms as mass points. LAMMPS also supports several molecule related
+# atom styles, which are mostly useful for small molecules, polymers and in
+# chemistry.
+atom_style atomic
+
+# Define a crystal lattice. We are simulating copper, so we use fcc.
+# The last number is the lattice constant.
+lattice fcc 3.632                         
+
+# Repeat the unit cell 8 times in each direction.
+region copperbox block  0 8  0 8  0 8  units lattice
+
+# Fill the lattice with atoms of type 1. We will later define type 1
+# to be copper.
+create_box 1 copperbox
+create_atoms 1 box
+
+# Atom type number 1 is copper, for which we specify the mass in u.
+mass 1 63.546
+
+# Set up the description of the forces between atoms. We use a parametrized
+# EAM potential, the parameters (and reference to publication) are given in
+# the file Cu_mishin1.eam.alloy. This file must be in the same directory as this
+# script.
+pair_style eam/alloy
+pair_coeff * * Cu_mishin1.eam.alloy Cu        # Atom type 1 is copper.
+
+# Use a velocity-Verlet integrator. This is also the default for LAMMPS.
+run_style verlet
+
+# This defines the timestep delta t for the velocity-Verlet.
+timestep 0.001 # ps
+
+# This tells LAMMPS which values to output to the screen and the file
+# "log.lammps".
+# Step, temperature, potential energy, kinetic energy, total energy,
+# pressure, volume, length in x, y, z.
+thermo_style custom step temp pe ke etotal press vol lx ly lz
+
+# Output every 100 steps.
+thermo 100 
+
+# Initialize temperature to 300 K. Here, only the kinetic energy is
+# manipulated. Therefore, we assume that equipartition is applicable
+# and assign a kinetic energy corresponding to 600 K. Half of that energy
+# will be converted to potential energy. You can convince yourself that this
+# is correct by observing the temperature column of the output.
+# The last number is a random seed, a purely technical variable controlling
+# the random assignment of velocities. If you are interested, you can find
+# information in the wikipedia article "pseudorandom number generator".
+velocity all create 600.0  91927
+
+# Now we define the ensemble that we want to use. Here this is NPT with
+# T = 300 K
+# p = 1 bar
+fix 1 all npt temp 300.0 300.0 0.1 iso 1.0 1.0 0.5
+
+# This is the command for LAMMPS to actually run the simulation. The number
+# gives the number of steps it should run. To get the corresponding time,
+# multiply with the value for timestep.
+run 5000
+
+# Repeat at different temperatures.
+fix 1 all npt temp 400.0 400.0 0.1 iso 1.0 1.0 0.5
+run 5000
+
+fix 1 all npt temp 500.0 500.0 0.1 iso 1.0 1.0 0.5
+run 5000
+
+fix 1 all npt temp 600.0 600.0 0.1 iso 1.0 1.0 0.5
+run 5000
